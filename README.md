@@ -1,1 +1,1 @@
-Cosmostation Fetch.ai-tx extractor
+Cosmostation Fetch.ai tx extractor
