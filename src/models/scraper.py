@@ -4,6 +4,7 @@ from logging import Logger
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
@@ -15,7 +16,10 @@ from src.utils.constants import (
     CHROME_DRIVER_86_PATH,
     CHROME_DRIVER_64_PATH,
     DESKTOP_TX_CLASS,
-    TX_HASH_PREFIX
+    TX_HASH_PREFIX,
+    TX_PAGINATION_CONTAINER_CLASS,
+    TX_CURRENT_PAGE_CLASS,
+    TX_TRANSACTIONS_CLASS,
 )
 
 
@@ -33,21 +37,24 @@ class TransactionScraper:
             raise MissingDriverException("Could not locate file `chromedriver.exe`")
 
         self.tx_pages = 0
+        self.current_page = 0
         self.tx_hash_links = []
 
     def initiate(self):
         try:
             self.logger.info(f"Session started for account at: {self.url}")
 
-            self.driver.minimize_window()
+            # self.driver.minimize_window()
 
             self.load_page()
             self.paginate_and_read_transactions()
+            # self.extract_transactions()
             self.process_transactions()
             self.close_scraper()
 
         except (TimeoutException, RetrievalException) as e:
             self.logger.info(e)
+            self.close_scraper()
 
     def load_page(self):
         self.driver.get(self.url)
@@ -58,26 +65,56 @@ class TransactionScraper:
         WebDriverWait(self.driver, 10).until(tx_container_present)
 
     def paginate_and_read_transactions(self):
-        # TODO
-        self.extract_transactions()
+        while True:
+            pagination_container = self.refresh_pagination_container()
+
+            current_link = pagination_container.find_element(By.CLASS_NAME, TX_CURRENT_PAGE_CLASS)
+
+            if current_link:
+                self.current_page = current_link.text
+
+            print(f"Current page: {self.current_page}")
+
+            page_number_buttons = pagination_container.find_element(By.CLASS_NAME, "DefaultPagination_pagesWrapper__n0DFe")
+            buttons = page_number_buttons.find_elements(By.TAG_NAME, value="button")
+
+            self.extract_transactions()
+
+            for button in buttons:
+                element = button.find_element(By.TAG_NAME, "p")
+                page = int(element.text)
+
+                if page and page == int(self.current_page) + 1:
+                    # print(page)
+                    element.click()
+                    self.extract_transactions()
+                    self.current_page = page
+
+            if self.current_page == 22:
+                break
+
+    def refresh_pagination_container(self) -> WebElement:
+        return WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+            (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
     def extract_transactions(self):
         try:
-            transactions = self.driver.find_elements(By.CLASS_NAME, DESKTOP_TX_CLASS)
+            tx_table = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                (By.CLASS_NAME, TX_TRANSACTIONS_CLASS)))
+
+            transactions = tx_table.find_elements(By.CLASS_NAME, DESKTOP_TX_CLASS)
 
             if len(transactions) == 0:
                 raise RetrievalException("No transactions found")
 
             for tx in transactions:
-                links = [
+                links = set([
                     tx.get_attribute('href') for tx in tx.find_elements(by=By.TAG_NAME, value="a")
                     if tx.get_attribute('href').startswith(TX_HASH_PREFIX)
-                ]
+                ])
 
                 for li in links:
                     self.tx_hash_links.append(li)
-
-            self.tx_hash_links = set(self.tx_hash_links)
 
             if len(self.tx_hash_links) == 0:
                 raise RetrievalException(f"No transactions were extracted")
