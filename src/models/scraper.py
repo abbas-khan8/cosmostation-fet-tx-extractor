@@ -4,7 +4,6 @@ from logging import Logger
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
@@ -20,6 +19,7 @@ from src.utils.constants import (
     TX_PAGINATION_CONTAINER_CLASS,
     TX_CURRENT_PAGE_CLASS,
     TX_TRANSACTIONS_CLASS,
+    TX_PAGE_BUTTONS_CONTAINER_CLASS,
 )
 
 
@@ -66,7 +66,8 @@ class TransactionScraper:
 
     def paginate_and_read_transactions(self):
         while True:
-            pagination_container = self.refresh_pagination_container()
+            pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
             current_link = pagination_container.find_element(By.CLASS_NAME, TX_CURRENT_PAGE_CLASS)
 
@@ -75,7 +76,10 @@ class TransactionScraper:
 
             print(f"Current page: {self.current_page}")
 
-            page_number_buttons = pagination_container.find_element(By.CLASS_NAME, "DefaultPagination_pagesWrapper__n0DFe")
+            page_number_buttons = pagination_container.find_element(
+                By.CLASS_NAME,
+                TX_PAGE_BUTTONS_CONTAINER_CLASS
+            )
             buttons = page_number_buttons.find_elements(By.TAG_NAME, value="button")
 
             self.extract_transactions()
@@ -85,17 +89,13 @@ class TransactionScraper:
                 page = int(element.text)
 
                 if page and page == int(self.current_page) + 1:
-                    # print(page)
+                    print(page)
                     element.click()
-                    self.extract_transactions()
+                    # self.extract_transactions()
                     self.current_page = page
 
             if self.current_page == 22:
                 break
-
-    def refresh_pagination_container(self) -> WebElement:
-        return WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
-            (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
     def extract_transactions(self):
         try:

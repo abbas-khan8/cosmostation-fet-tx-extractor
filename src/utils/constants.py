@@ -13,6 +13,7 @@ MOBILE_TX_CLASS = "Card_cardHeader__21_Pk Card_dense__3RWij"
 TX_HASH_PREFIX = "https://www.mintscan.io/fetchai/txs/"
 TX_PAGINATION_CONTAINER_CLASS = "DefaultPagination_container__pn5uT"
 TX_CURRENT_PAGE_CLASS = "DefaultPagination_current__2GKAc"
+TX_PAGE_BUTTONS_CONTAINER_CLASS = "DefaultPagination_pagesWrapper__n0DFe"
 
 # CLI Messages
 ADDRESS_ERR = "The FET address entered is not valid"
