@@ -49,8 +49,9 @@ class TransactionScraper:
             self.load_page()
             self.paginate_and_read_transactions()
             # self.extract_transactions()
-            self.process_transactions()
-            self.close_scraper()
+            # self.process_transactions()
+            # self.close_scraper()
+            input("...")
 
         except (TimeoutException, RetrievalException) as e:
             self.logger.info(e)
@@ -80,11 +81,11 @@ class TransactionScraper:
                 By.CLASS_NAME,
                 TX_PAGE_BUTTONS_CONTAINER_CLASS
             )
-            buttons = page_number_buttons.find_elements(By.TAG_NAME, value="button")
+            page_buttons = page_number_buttons.find_elements(By.TAG_NAME, value="button")
 
             self.extract_transactions()
 
-            for button in buttons:
+            for button in page_buttons:
                 element = button.find_element(By.TAG_NAME, "p")
                 page = int(element.text)
 
@@ -94,8 +95,18 @@ class TransactionScraper:
                     # self.extract_transactions()
                     self.current_page = page
 
-            if self.current_page == 22:
-                break
+            pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
+
+            change_page_buttons = pagination_container.find_elements(By.CLASS_NAME, "DefaultPagination_paginationIcon__3vgcY")
+
+            for button in change_page_buttons:
+                button_classes = button.get_attribute("class")
+
+                if "DefaultPagination_inactive__YkYQt" in button_classes:
+                    break
+
+                print(button_classes)
 
     def extract_transactions(self):
         try:
