@@ -1,11 +1,18 @@
-from src.utils import process_pages
-from src.utils.constants import ACCOUNT_URL
+import logging
 
+from src.models.scraper import TransactionScraper
+from src.utils.constants import FET_ADDRESS
+from src.utils.exceptions import MissingDriverException
 
-class Client:
-    def __init__(self):
-        pass
+logging.basicConfig(level=logging.INFO)
 
 
 def run():
-    process_pages(ACCOUNT_URL)
+    logger = logging.getLogger("TX-SCRAPER-LOG")
+
+    try:
+        scraper = TransactionScraper(FET_ADDRESS, logger)
+        scraper.initiate()
+
+    except MissingDriverException as e:
+        logger.info(e)
