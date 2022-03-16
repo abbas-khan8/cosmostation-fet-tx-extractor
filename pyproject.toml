@@ -8,7 +8,7 @@ packages = [
 ]
 
 [tool.poetry.scripts]
-app = "src/main:main"
+app = "main:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
