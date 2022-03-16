@@ -1,14 +1,15 @@
 [tool.poetry]
-name = "cosmostation-fet-tx-scraper"
+name = "fetch_tx_extractor"
 version = "0.1.0"
 description = ""
 authors = ["Abbas Khan <78728539+abbas-khan8@users.noreply.github.com>"]
+readme = "README.md"
 packages = [
     { include = "src" }
 ]
 
 [tool.poetry.scripts]
-app = "main:main"
+app = "src.main:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
