@@ -70,27 +70,34 @@ class TransactionScraper:
             pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
-            current_link = pagination_container.find_element(By.CLASS_NAME, TX_CURRENT_PAGE_CLASS)
-
-            if current_link:
-                self.pages = current_link.text
-
             page_number_buttons = pagination_container.find_element(
                 By.CLASS_NAME,
                 TX_PAGE_BUTTONS_CONTAINER_CLASS
             )
             page_buttons = page_number_buttons.find_elements(By.TAG_NAME, value="button")
 
+            current_page = pagination_container.find_element(By.CLASS_NAME, TX_CURRENT_PAGE_CLASS)
+
+            if current_page:
+                self.pages = current_page.text
+            else:
+                raise RetrievalException(f"Failed to retrieve page number from paginator element")
+
             self.extract_transactions()
 
             for button in page_buttons:
                 element = button.find_element(By.TAG_NAME, "p")
-                page = int(element.text)
 
-                if page and page == int(self.pages) + 1:
-                    element.click()
-                    self.extract_transactions()
-                    self.pages = page
+                try:
+                    page = int(element.text)
+
+                    if page and page == int(self.pages) + 1:
+                        element.click()
+                        self.extract_transactions()
+                        self.pages = page
+
+                except ValueError:
+                    raise RetrievalException(f"Failed to parse page number")
 
             pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
