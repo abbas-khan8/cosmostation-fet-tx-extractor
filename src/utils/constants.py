@@ -1,5 +1,7 @@
 URL = "https://www.mintscan.io/fetchai"
 FET_ADDRESS = "fetch1pg5eg6kd299272e5w2amdv8fjf8h96xeem992g"
+LARGE_FET_ADDRESS = "fetch1996dpnl7l24n4m9w7ue0dp62gugyp5nhjdekm5"
+MAX_TRANSACTIONS_LIMIT = 10000
 
 # Paths
 CHROME_DRIVER_86_PATH = "C:\Program Files (x86)\Google\Chrome\chromedriver.exe"

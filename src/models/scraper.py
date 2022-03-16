@@ -22,6 +22,7 @@ from src.utils.constants import (
     TX_PAGE_BUTTONS_CONTAINER_CLASS,
     TX_LAST_BUTTON_CLASS,
     INACTIVE_BUTTON_CLASS,
+    MAX_TRANSACTIONS_LIMIT,
 )
 
 
@@ -105,7 +106,7 @@ class TransactionScraper:
             last_page_button = pagination_container.find_element(By.CLASS_NAME, TX_LAST_BUTTON_CLASS)
             button_classes = last_page_button.get_attribute("class")
 
-            if INACTIVE_BUTTON_CLASS in button_classes:
+            if len(self.tx_hash_links) >= MAX_TRANSACTIONS_LIMIT or INACTIVE_BUTTON_CLASS in button_classes:
                 self.logger.info(
                     f"Successfully collected {len(self.tx_hash_links)} transactions across {self.pages} pages"
                 )
