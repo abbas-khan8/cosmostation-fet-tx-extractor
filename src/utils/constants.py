@@ -14,6 +14,8 @@ TX_HASH_PREFIX = "https://www.mintscan.io/fetchai/txs/"
 TX_PAGINATION_CONTAINER_CLASS = "DefaultPagination_container__pn5uT"
 TX_CURRENT_PAGE_CLASS = "DefaultPagination_current__2GKAc"
 TX_PAGE_BUTTONS_CONTAINER_CLASS = "DefaultPagination_pagesWrapper__n0DFe"
+TX_LAST_BUTTON_CLASS = "DefaultPagination_toLast__3cgxX"
+INACTIVE_BUTTON_CLASS = "DefaultPagination_inactive__YkYQt"
 
 # CLI Messages
 ADDRESS_ERR = "The FET address entered is not valid"

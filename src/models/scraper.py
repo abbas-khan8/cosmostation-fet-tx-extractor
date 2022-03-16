@@ -20,6 +20,8 @@ from src.utils.constants import (
     TX_CURRENT_PAGE_CLASS,
     TX_TRANSACTIONS_CLASS,
     TX_PAGE_BUTTONS_CONTAINER_CLASS,
+    TX_LAST_BUTTON_CLASS,
+    INACTIVE_BUTTON_CLASS,
 )
 
 
@@ -37,7 +39,7 @@ class TransactionScraper:
             raise MissingDriverException("Could not locate file `chromedriver.exe`")
 
         self.tx_pages = 0
-        self.current_page = 0
+        self.pages = 0
         self.tx_hash_links = []
 
     def initiate(self):
@@ -48,10 +50,8 @@ class TransactionScraper:
 
             self.load_page()
             self.paginate_and_read_transactions()
-            # self.extract_transactions()
-            # self.process_transactions()
-            # self.close_scraper()
-            input("...")
+            self.process_transactions()
+            self.close_scraper()
 
         except (TimeoutException, RetrievalException) as e:
             self.logger.info(e)
@@ -73,9 +73,7 @@ class TransactionScraper:
             current_link = pagination_container.find_element(By.CLASS_NAME, TX_CURRENT_PAGE_CLASS)
 
             if current_link:
-                self.current_page = current_link.text
-
-            print(f"Current page: {self.current_page}")
+                self.pages = current_link.text
 
             page_number_buttons = pagination_container.find_element(
                 By.CLASS_NAME,
@@ -89,24 +87,22 @@ class TransactionScraper:
                 element = button.find_element(By.TAG_NAME, "p")
                 page = int(element.text)
 
-                if page and page == int(self.current_page) + 1:
-                    print(page)
+                if page and page == int(self.pages) + 1:
                     element.click()
-                    # self.extract_transactions()
-                    self.current_page = page
+                    self.extract_transactions()
+                    self.pages = page
 
             pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
-            change_page_buttons = pagination_container.find_elements(By.CLASS_NAME, "DefaultPagination_paginationIcon__3vgcY")
+            last_page_button = pagination_container.find_element(By.CLASS_NAME, TX_LAST_BUTTON_CLASS)
+            button_classes = last_page_button.get_attribute("class")
 
-            for button in change_page_buttons:
-                button_classes = button.get_attribute("class")
-
-                if "DefaultPagination_inactive__YkYQt" in button_classes:
-                    break
-
-                print(button_classes)
+            if INACTIVE_BUTTON_CLASS in button_classes:
+                self.logger.info(
+                    f"Successfully collected {len(self.tx_hash_links)} transactions across {self.pages} pages"
+                )
+                break
 
     def extract_transactions(self):
         try:
@@ -135,8 +131,7 @@ class TransactionScraper:
 
     def process_transactions(self):
         # TODO
-        for tx_hash in self.tx_hash_links:
-            self.logger.info(tx_hash)
+        pass
 
     def close_scraper(self):
         self.logger.info(f"Session ended for account: {self.fet_address}")
