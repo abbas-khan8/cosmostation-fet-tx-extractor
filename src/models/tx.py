@@ -1,11 +1,5 @@
 from datetime import datetime
-
-
-class TransactionRow:
-    def __init__(self, tx_hash: str, fee: float, fee_currency: str):
-        self.tx_hash = tx_hash
-        self.fee = fee
-        self.fee_currency = fee_currency
+from typing import List
 
 
 class Transaction:
@@ -14,7 +8,7 @@ class Transaction:
         self.time = time
         self.fee = fee
         self.fee_currency = fee_currency
-        self.messages = []
+        self.messages: List[TransactionMessage] = []
 
 
 class TransactionMessage:
