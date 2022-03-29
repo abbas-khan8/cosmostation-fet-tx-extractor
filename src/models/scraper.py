@@ -1,19 +1,13 @@
-import os.path
-
-from logging import Logger
-
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from src.utils.exceptions import MissingDriverException, RetrievalException
+from src.models import Configuration, MessageExtractor
+from src.utils.exceptions import RetrievalException
 from src.utils.constants import (
     URL,
     TX_TABLE_CLASS,
-    CHROME_DRIVER_86_PATH,
-    CHROME_DRIVER_64_PATH,
     DESKTOP_TX_CLASS,
     TX_HASH_PREFIX,
     TX_PAGINATION_CONTAINER_CLASS,
@@ -22,32 +16,23 @@ from src.utils.constants import (
     TX_PAGE_BUTTONS_CONTAINER_CLASS,
     TX_LAST_BUTTON_CLASS,
     INACTIVE_BUTTON_CLASS,
-    MAX_TRANSACTIONS_LIMIT,
 )
 
 
 class TransactionScraper:
-    def __init__(self, fet_address: str, logger: Logger):
-        self.fet_address = fet_address
-        self.url = f"{URL}/account/{fet_address}"
-        self.logger = logger
-
-        if os.path.exists(CHROME_DRIVER_64_PATH):
-            self.driver = webdriver.Chrome(CHROME_DRIVER_64_PATH)
-        elif os.path.exists(CHROME_DRIVER_86_PATH):
-            self.driver = webdriver.Chrome(CHROME_DRIVER_86_PATH)
-        else:
-            raise MissingDriverException("Could not locate file `chromedriver.exe`")
-
+    def __init__(self, config: Configuration):
+        self.config = config
+        self.fet_address = config.address
+        self.url = f"{URL}/account/{config.address}"
         self.tx_pages = 0
         self.pages = 0
         self.tx_hash_links = []
 
     def initiate(self):
         try:
-            self.logger.info(f"Session started for account at: {self.url}")
+            self.config.logger.info(f"Session started for account at: {self.url}")
 
-            # self.driver.minimize_window()
+            self.config.driver.minimize_window()
 
             self.load_page()
             self.paginate_and_read_transactions()
@@ -55,20 +40,20 @@ class TransactionScraper:
             self.close_scraper()
 
         except (TimeoutException, RetrievalException) as e:
-            self.logger.info(e)
+            self.config.logger.info(e)
             self.close_scraper()
 
     def load_page(self):
-        self.driver.get(self.url)
+        self.config.driver.get(self.url)
 
         tx_container_present = EC.presence_of_element_located(
             (By.CLASS_NAME, TX_TABLE_CLASS))
 
-        WebDriverWait(self.driver, 10).until(tx_container_present)
+        WebDriverWait(self.config.driver, 10).until(tx_container_present)
 
     def paginate_and_read_transactions(self):
         while True:
-            pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+            pagination_container = WebDriverWait(self.config.driver, 10).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
             page_number_buttons = pagination_container.find_element(
@@ -100,21 +85,21 @@ class TransactionScraper:
                 except ValueError:
                     raise RetrievalException(f"Failed to parse page number")
 
-            pagination_container = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+            pagination_container = WebDriverWait(self.config.driver, 10).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, TX_PAGINATION_CONTAINER_CLASS)))
 
             last_page_button = pagination_container.find_element(By.CLASS_NAME, TX_LAST_BUTTON_CLASS)
             button_classes = last_page_button.get_attribute("class")
 
-            if len(self.tx_hash_links) >= MAX_TRANSACTIONS_LIMIT or INACTIVE_BUTTON_CLASS in button_classes:
-                self.logger.info(
+            if len(self.tx_hash_links) >= self.config.tx_limit or INACTIVE_BUTTON_CLASS in button_classes:
+                self.config.logger.info(
                     f"Successfully collected {len(self.tx_hash_links)} transactions across {self.pages} pages"
                 )
                 break
 
     def extract_transactions(self):
         try:
-            tx_table = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+            tx_table = WebDriverWait(self.config.driver, 10).until(EC.presence_of_element_located(
                 (By.CLASS_NAME, TX_TRANSACTIONS_CLASS)))
 
             transactions = tx_table.find_elements(By.CLASS_NAME, DESKTOP_TX_CLASS)
@@ -138,9 +123,9 @@ class TransactionScraper:
             raise RetrievalException(f"Failed to extract transactions: {e}")
 
     def process_transactions(self):
-        # TODO
-        pass
+        msg_extractor = MessageExtractor(config=self.config, tx_hash_links=self.tx_hash_links)
+        msg_extractor.initiate()
 
     def close_scraper(self):
-        self.logger.info(f"Session ended for account: {self.fet_address}")
-        self.driver.quit()
+        self.config.logger.info(f"Session ended for account: {self.fet_address}")
+        self.config.driver.quit()
