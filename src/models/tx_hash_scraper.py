@@ -3,34 +3,31 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from src.models import Configuration, MessageExtractor
+from src.models import Configuration, TxDetailScraper
 from src.utils.exceptions import RetrievalException
 from src.utils.constants import (
-    URL,
-    TX_TABLE_CLASS,
-    DESKTOP_TX_CLASS,
+    TX_CONTAINER_CLASS,
+    TX_ROW_CLASS,
     TX_HASH_PREFIX,
     TX_PAGINATION_CONTAINER_CLASS,
     TX_CURRENT_PAGE_CLASS,
-    TX_TRANSACTIONS_CLASS,
+    TX_TABLE_CLASS,
     TX_PAGE_BUTTONS_CONTAINER_CLASS,
     TX_LAST_BUTTON_CLASS,
-    INACTIVE_BUTTON_CLASS,
+    TX_INACTIVE_BUTTON_CLASS, URL,
 )
 
 
-class TransactionScraper:
+class TxHashScraper:
     def __init__(self, config: Configuration):
         self.config = config
-        self.fet_address = config.address
-        self.url = f"{URL}/account/{config.address}"
         self.tx_pages = 0
         self.pages = 0
         self.tx_hash_links = []
 
     def initiate(self):
         try:
-            self.config.logger.info(f"Session started for account at: {self.url}")
+            self.config.logger.info(f"Session started for: {self.config.address}")
 
             self.config.driver.minimize_window()
 
@@ -41,13 +38,18 @@ class TransactionScraper:
 
         except (TimeoutException, RetrievalException) as e:
             self.config.logger.info(e)
-            self.close_scraper()
+            input()
+            #self.close_scraper()
 
     def load_page(self):
-        self.config.driver.get(self.url)
+        url = f"{URL}/account/{self.config.address}"
+
+        self.config.driver.get(url)
+
+        self.config.logger.info(f"Loading page for account at: {url}")
 
         tx_container_present = EC.presence_of_element_located(
-            (By.CLASS_NAME, TX_TABLE_CLASS))
+            (By.CLASS_NAME, TX_CONTAINER_CLASS))
 
         WebDriverWait(self.config.driver, 10).until(tx_container_present)
 
@@ -91,7 +93,7 @@ class TransactionScraper:
             last_page_button = pagination_container.find_element(By.CLASS_NAME, TX_LAST_BUTTON_CLASS)
             button_classes = last_page_button.get_attribute("class")
 
-            if len(self.tx_hash_links) >= self.config.tx_limit or INACTIVE_BUTTON_CLASS in button_classes:
+            if len(self.tx_hash_links) >= self.config.tx_limit or TX_INACTIVE_BUTTON_CLASS in button_classes:
                 self.config.logger.info(
                     f"Successfully collected {len(self.tx_hash_links)} transactions across {self.pages} pages"
                 )
@@ -100,9 +102,9 @@ class TransactionScraper:
     def extract_transactions(self):
         try:
             tx_table = WebDriverWait(self.config.driver, 10).until(EC.presence_of_element_located(
-                (By.CLASS_NAME, TX_TRANSACTIONS_CLASS)))
+                (By.CLASS_NAME, TX_TABLE_CLASS)))
 
-            transactions = tx_table.find_elements(By.CLASS_NAME, DESKTOP_TX_CLASS)
+            transactions = tx_table.find_elements(By.CLASS_NAME, TX_ROW_CLASS)
 
             if len(transactions) == 0:
                 raise RetrievalException("No transactions found")
@@ -123,9 +125,10 @@ class TransactionScraper:
             raise RetrievalException(f"Failed to extract transactions: {e}")
 
     def process_transactions(self):
-        msg_extractor = MessageExtractor(config=self.config, tx_hash_links=self.tx_hash_links)
-        msg_extractor.initiate()
+        scraper = TxDetailScraper(config=self.config, tx_hash_links=self.tx_hash_links)
+
+        transactions = scraper.initiate()
 
     def close_scraper(self):
-        self.config.logger.info(f"Session ended for account: {self.fet_address}")
+        self.config.logger.info(f"Session ended for account: {self.config.address}")
         self.config.driver.quit()

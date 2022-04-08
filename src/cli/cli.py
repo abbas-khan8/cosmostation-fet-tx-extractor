@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from src.models import Configuration, TransactionScraper
+from src.models import Configuration, TxHashScraper
 from src.utils.constants import FET_ADDRESS
 from src.utils.exceptions import MissingDriverException
 
@@ -16,7 +16,7 @@ def run():
     )
 
     try:
-        scraper = TransactionScraper(config=config)
+        scraper = TxHashScraper(config=config)
         scraper.initiate()
 
     except MissingDriverException as e:
